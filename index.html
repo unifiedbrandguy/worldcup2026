@@ -486,7 +486,7 @@ const GROUPS = [
 //  scores: null = not yet played
 // ═══════════════════════════════════════════════════════════
 let MATCHES = [
-  ['A','2026-06-11','15:00','Mexico','South Africa',0,0,'Estadio Azteca','Mexico City'],
+  ['A','2026-06-11','15:00','Mexico','South Africa',null,null,'Estadio Azteca','Mexico City'],
   ['A','2026-06-11','22:00','South Korea','Czechia',null,null,'SoFi Stadium','Los Angeles'],
   ['A','2026-06-18','15:00','South Africa','South Korea',null,null,'Levi\'s Stadium','San Francisco'],
   ['A','2026-06-18','22:00','Mexico','Czechia',null,null,'NRG Stadium','Houston'],
@@ -666,17 +666,15 @@ async function fetchScores() {
       const asH = am.score?.halfTime?.away ?? am.score?.halfTime?.awayTeam ?? null;
 
       const isPlayed = status === 'FINISHED' || status === 'IN_PLAY' || status === 'PAUSED';
-      const hasScore = isPlayed && hs !== null && as_ !== null;
-      const hasHalfScore = isPlayed && hsH !== null && asH !== null;
+      // Only use scores if API has returned real integers — never fall back to 0
+      const hasRealScore = isPlayed && typeof hs === 'number' && typeof as_ === 'number';
 
-      debugLines.push(`${hn} vs ${an} | ${status} | FT:${hs??'?'}-${as_??'?'} | HT:${hsH??'?'}-${asH??'?'}`);
+      debugLines.push(`${hn} vs ${an} | ${status} | FT:${hs??'?'}-${as_??'?'}`);
 
-      if (!isPlayed) return;
+      if (!hasRealScore) return;  // skip entirely if no confirmed score
 
-      const scoreH = hs ?? hsH ?? 0;
-      const scoreA = as_ ?? asH ?? 0;
-
-      if (scoreH === null && scoreA === null) return;
+      const scoreH = hs;
+      const scoreA = as_;
 
       // Normalize names for matching
       function norm(n) {

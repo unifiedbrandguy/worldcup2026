@@ -265,9 +265,9 @@
     align-items: center;
     gap: 8px;
   }
-  .mc-team { flex: 1; display: flex; align-items: center; gap: 8px; }
-  .mc-team.away { flex-direction: row-reverse; }
-  .mc-flag { font-size: 28px; line-height: 1; flex-shrink: 0; }
+  .mc-team { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .mc-team.away { align-items: center; }
+  .mc-flag { font-size: 36px; line-height: 1; flex-shrink: 0; }
   .mc-tname {
     font-family: 'Barlow Condensed', sans-serif;
     font-size: 24px;
@@ -276,8 +276,9 @@
     overflow: hidden;
     text-overflow: ellipsis;
     letter-spacing: 0.02em;
+    text-align: center;
   }
-  .mc-team.away .mc-tname { text-align: right; }
+  .mc-team.away .mc-tname { text-align: center; }
 
   .mc-score-block { text-align: center; min-width: 80px; flex-shrink: 0; }
   .mc-score {
@@ -295,7 +296,7 @@
     font-size: 32px;
   }
   .match-card.finished .mc-flag {
-    font-size: 36px;
+    font-size: 44px;
   }
   .mc-score .sep { color: var(--muted); margin: 0 3px; }
   .mc-vs { font-size: 18px; font-weight: 600; color: var(--muted); }
@@ -458,22 +459,30 @@
 //  FLAGS
 // ═══════════════════════════════════════════════════════════
 const FLAGS = {
-  'Mexico':'🇲🇽','South Africa':'🇿🇦','South Korea':'🇰🇷','Czechia':'🇨🇿',
-  'Canada':'🇨🇦','Switzerland':'🇨🇭','Qatar':'🇶🇦','Bosnia and Herzegovina':'🇧🇦',
-  'Brazil':'🇧🇷','Morocco':'🇲🇦','Haiti':'🇭🇹','Scotland':'🏴󠁧󠁢󠁳󠁣󠁴󠁿',
-  'USA':'🇺🇸','Paraguay':'🇵🇾','Australia':'🇦🇺','Türkiye':'🇹🇷',
-  'Germany':'🇩🇪',"Côte d'Ivoire":'🇨🇮','Ecuador':'🇪🇨','Curaçao':'🇨🇼',
-  'Netherlands':'🇳🇱','Japan':'🇯🇵','Sweden':'🇸🇪','Finland':'🇫🇮',
-  'England':'🏴󠁧󠁢󠁥󠁮󠁧󠁿','Colombia':'🇨🇴','Nigeria':'🇳🇬','Chile':'🇨🇱',
-  'Serbia':'🇷🇸','Portugal':'🇵🇹','Croatia':'🇭🇷','Honduras':'🇭🇳',
-  'France':'🇫🇷','Argentina':'🇦🇷','Peru':'🇵🇪','Poland':'🇵🇱',
-  'Spain':'🇪🇸','New Zealand':'🇳🇿','Saudi Arabia':'🇸🇦','Algeria':'🇩🇿',
-  'Jordan':'🇯🇴','Belgium':'🇧🇪','Iran':'🇮🇷','Ghana':'🇬🇭','Austria':'🇦🇹',
-  'Uruguay':'🇺🇾','Cape Verde':'🇨🇻','Egypt':'🇪🇬','Tunisia':'🇹🇳',
-  'Denmark':'🇩🇰','Slovakia':'🇸🇰','Iraq':'🇮🇶','DR Congo':'🇨🇩',
-  'Uzbekistan':'🇺🇿','Panama':'🇵🇦','Senegal':'🇸🇳','Norway':'🇳🇴',
+  'Mexico':'mx','South Africa':'za','South Korea':'kr','Czechia':'cz',
+  'Canada':'ca','Switzerland':'ch','Qatar':'qa','Bosnia and Herzegovina':'ba',
+  'Bosnia-Herzegovina':'ba','Bosnia-H.':'ba',
+  'Brazil':'br','Morocco':'ma','Haiti':'ht','Scotland':'gb-sct',
+  'USA':'us','United States':'us','Paraguay':'py','Australia':'au',
+  'Türkiye':'tr','Turkey':'tr','Germany':'de',
+  "Côte d'Ivoire":'ci','Ivory Coast':'ci','Ecuador':'ec','Curaçao':'cw','Curacao':'cw',
+  'Netherlands':'nl','Japan':'jp','Sweden':'se','Finland':'fi',
+  'England':'gb-eng','Wales':'gb-wls','Colombia':'co','Nigeria':'ng','Chile':'cl',
+  'Serbia':'rs','Portugal':'pt','Croatia':'hr','Honduras':'hn',
+  'France':'fr','Argentina':'ar','Peru':'pe','Poland':'pl',
+  'Spain':'es','New Zealand':'nz','Saudi Arabia':'sa','Algeria':'dz',
+  'Jordan':'jo','Belgium':'be','Iran':'ir','Ghana':'gh','Austria':'at',
+  'Uruguay':'uy','Cape Verde':'cv','Cape Verde Islands':'cv','Egypt':'eg','Tunisia':'tn',
+  'Denmark':'dk','Slovakia':'sk','Iraq':'iq','DR Congo':'cd','Congo DR':'cd',
+  'Uzbekistan':'uz','Panama':'pa','Senegal':'sn','Norway':'no',
+  'Korea Republic':'kr','Bosnia and Herzegovina':'ba',
 };
-const F = n => FLAGS[n] || '🏳️';
+function F(n) {
+  if (!n) return '<img src="https://flagcdn.com/w40/un.png" style="height:1em;vertical-align:middle">';
+  const code = FLAGS[n] || FLAGS[n.trim()] || null;
+  if (!code) return '<span style="font-size:0.6em;opacity:0.5">' + n.substring(0,3) + '</span>';
+  return '<img src="https://flagcdn.com/w40/' + code + '.png" style="height:1.2em;vertical-align:middle;border-radius:2px">';
+}
 
 // ═══════════════════════════════════════════════════════════
 //  GROUPS
@@ -738,6 +747,14 @@ const SHORT_NAMES = {
   'Cape Verde Islands': 'Cape Verde',
   "Côte d'Ivoire": "Côte d'Ivoire",
 };
+// Also shorten names in match cards
+function shortMatchName(n) {
+  const map = {
+    'Bosnia and Herzegovina': 'Bosnia-Herz.',
+    'Cape Verde Islands': 'Cape Verde',
+  };
+  return map[n] || n;
+}
 function shortName(n) { return SHORT_NAMES[n] || n; }
 
 function renderStandings(el, groupIds) {
@@ -801,9 +818,15 @@ function renderCenter(slideIdx, groupIndex) {
         <div class="mc-meta">${hasScore ? '📍 '+city : venue}</div>${pill}
       </div>
       <div class="mc-teams">
-        <div class="mc-team"><span class="mc-flag">${F(home)}</span><span class="mc-tname">${home}</span></div>
+        <div class="mc-team">
+          <span class="mc-tname">${shortMatchName(home)}</span>
+          <span class="mc-flag">${F(home)}</span>
+        </div>
         <div class="mc-score-block">${scoreBlock}</div>
-        <div class="mc-team away"><span class="mc-tname">${away}</span><span class="mc-flag">${F(away)}</span></div>
+        <div class="mc-team away">
+          <span class="mc-tname">${shortMatchName(away)}</span>
+          <span class="mc-flag">${F(away)}</span>
+        </div>
       </div>
     </div>`;
   }).join('');

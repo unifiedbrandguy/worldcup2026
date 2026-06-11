@@ -655,30 +655,51 @@ async function fetchScores() {
     let debugLines = [`API OK — ${apiMatches.length} matches returned`, ''];
 
     apiMatches.forEach(am => {
-      const hn = am.homeTeam?.name || '';
-      const an = am.awayTeam?.name || '';
+      const hn = am.homeTeam?.name || am.homeTeam?.shortName || '';
+      const an = am.awayTeam?.name || am.awayTeam?.shortName || '';
       const status = am.status;
-      const hs = am.score?.fullTime?.home;
-      const as_ = am.score?.fullTime?.away;
-      const hsH = am.score?.halfTime?.home;
-      const asH = am.score?.halfTime?.away;
 
-      const hasScore = (status === 'FINISHED' || status === 'IN_PLAY' || status === 'PAUSED')
-        && (hs !== null && hs !== undefined || hsH !== null);
+      // Try all score fields the API might use
+      const hs = am.score?.fullTime?.home ?? am.score?.fullTime?.homeTeam ?? null;
+      const as_ = am.score?.fullTime?.away ?? am.score?.fullTime?.awayTeam ?? null;
+      const hsH = am.score?.halfTime?.home ?? am.score?.halfTime?.homeTeam ?? null;
+      const asH = am.score?.halfTime?.away ?? am.score?.halfTime?.awayTeam ?? null;
 
-      debugLines.push(`${hn} vs ${an} | ${status} | FT:${hs??'?'}-${as_??'?'}`);
+      const isPlayed = status === 'FINISHED' || status === 'IN_PLAY' || status === 'PAUSED';
+      const hasScore = isPlayed && hs !== null && as_ !== null;
+      const hasHalfScore = isPlayed && hsH !== null && asH !== null;
 
-      if (!hasScore) return;
+      debugLines.push(`${hn} vs ${an} | ${status} | FT:${hs??'?'}-${as_??'?'} | HT:${hsH??'?'}-${asH??'?'}`);
+
+      if (!isPlayed) return;
 
       const scoreH = hs ?? hsH ?? 0;
       const scoreA = as_ ?? asH ?? 0;
 
+      if (scoreH === null && scoreA === null) return;
+
+      // Normalize names for matching
+      function norm(n) {
+        return (n||'').toLowerCase()
+          .replace('united states','usa')
+          .replace('türkiye','turkey')
+          .replace('ivory coast',"côte d'ivoire")
+          .replace('czech republic','czechia')
+          .replace('bosnia-herzegovina','bosnia and herzegovina')
+          .replace('curacao','curaçao')
+          .replace('cape verde islands','cape verde')
+          .replace('ir iran','iran')
+          .replace('korea republic','south korea');
+      }
+
+      const hnN = norm(hn);
+      const anN = norm(an);
+
       const idx = MATCHES.findIndex(m => {
-        const mh = m[3]; const ma = m[4];
-        const ah = FD_ALIASES[mh] || mh;
-        const aa = FD_ALIASES[ma] || ma;
-        return (hn.includes(ah) || ah.includes(hn) || hn === mh) &&
-               (an.includes(aa) || aa.includes(an) || an === ma);
+        const mhN = norm(m[3]);
+        const maN = norm(m[4]);
+        return (hnN === mhN || hnN.includes(mhN) || mhN.includes(hnN)) &&
+               (anN === maN || anN.includes(maN) || maN.includes(anN));
       });
 
       if (idx >= 0) {
@@ -687,7 +708,7 @@ async function fetchScores() {
         updated++;
         debugLines.push(`  ✓ MATCHED → MATCHES[${idx}] updated to ${scoreH}-${scoreA}`);
       } else {
-        debugLines.push(`  ✗ NO MATCH FOUND in local schedule`);
+        debugLines.push(`  ✗ NO MATCH: "${hn}" vs "${an}" (normalized: "${hnN}" vs "${anN}")`);
       }
     });
 

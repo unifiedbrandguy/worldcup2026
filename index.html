@@ -400,8 +400,7 @@
   <div class="ftr">
     <div class="ftr-note">⚽ FIFA World Cup 2026 · Group Stage</div>
     <div class="ftr-spacer"></div>
-    <div class="ftr-api-status no-key" id="api-status">No API key</div>
-    <div class="ftr-key" id="ftr-key-hint">Add key for live scores: <a href="#" onclick="showKeyOverlay(); return false;">Set up →</a></div>
+
     <div class="ftr-refresh" id="refresh-label">–</div>
   </div>
 </div>
@@ -617,129 +616,45 @@ function setApiStatus(state, text) {
 async function fetchScores() {
   try {
     const res = await fetch('https://throbbing-mouse-4bbe.uk-guido.workers.dev/');
-
-    const rawText = await res.text();
-    console.log('API HTTP status:', res.status);
-    console.log('API raw response (first 1000 chars):', rawText.slice(0, 1000));
-
-    if (res.status === 403) {
-      setApiStatus('err', 'Key rejected (403)');
-      setDebug('HTTP 403 — key rejected or WC not in your plan.\n\nRaw: ' + rawText.slice(0,300));
-      return;
-    }
-    if (res.status === 400) {
-      setApiStatus('err', 'Bad request (400)');
-      setDebug('HTTP 400 — bad request.\nRaw: ' + rawText.slice(0,300));
-      return;
-    }
-    if (!res.ok) {
-      setApiStatus('err', 'HTTP ' + res.status);
-      setDebug('HTTP ' + res.status + '\nRaw: ' + rawText.slice(0,300));
-      return;
-    }
-
-    let data;
-    try { data = JSON.parse(rawText); }
-    catch(e) { setApiStatus('err', 'Bad JSON'); setDebug('JSON parse failed:\n' + rawText.slice(0,300)); return; }
-
+    if (!res.ok) return;
+    const data = await res.json();
     const apiMatches = data.matches || [];
-    console.log('Total matches returned:', apiMatches.length);
-
-    // Log all match statuses so we can see what the API has
-    const statusSummary = apiMatches.map(m =>
-      `${m.homeTeam?.name} vs ${m.awayTeam?.name}: ${m.status} | FT: ${m.score?.fullTime?.home}-${m.score?.fullTime?.away}`
-    ).join('\n');
-    console.log('All matches:\n' + statusSummary);
-
-    let updated = 0;
-    let debugLines = [`API OK — ${apiMatches.length} matches returned`, ''];
 
     apiMatches.forEach(am => {
       const hn = am.homeTeam?.name || am.homeTeam?.shortName || '';
       const an = am.awayTeam?.name || am.awayTeam?.shortName || '';
-      const status = am.status;
-
-      // Try all score fields the API might use
-      const hs = am.score?.fullTime?.home ?? am.score?.fullTime?.homeTeam ?? null;
-      const as_ = am.score?.fullTime?.away ?? am.score?.fullTime?.awayTeam ?? null;
-      const hsH = am.score?.halfTime?.home ?? am.score?.halfTime?.homeTeam ?? null;
-      const asH = am.score?.halfTime?.away ?? am.score?.halfTime?.awayTeam ?? null;
-
-      const isPlayed = status === 'FINISHED' || status === 'IN_PLAY' || status === 'PAUSED';
-      // Only use scores if API has returned real integers — never fall back to 0
-      const hasRealScore = isPlayed && typeof hs === 'number' && typeof as_ === 'number';
-
-      debugLines.push(`${hn} vs ${an} | ${status} | FT:${hs??'?'}-${as_??'?'}`);
-
-      if (!hasRealScore) return;  // skip entirely if no confirmed score
-
-      const scoreH = hs;
-      const scoreA = as_;
-
-      // Normalize names for matching
-      function norm(n) {
-        return (n||'').toLowerCase()
-          .replace('united states','usa')
-          .replace('türkiye','turkey')
-          .replace('ivory coast',"côte d'ivoire")
-          .replace('czech republic','czechia')
-          .replace('bosnia-herzegovina','bosnia and herzegovina')
-          .replace('curacao','curaçao')
-          .replace('cape verde islands','cape verde')
-          .replace('ir iran','iran')
-          .replace('korea republic','south korea');
+      if (hn && an) {
+        apiStatusMap[(hn + '|' + an).toLowerCase()] = am.status;
       }
 
-      const hnN = norm(hn);
-      const anN = norm(an);
+      const status = am.status;
+      const hs = am.score?.fullTime?.home ?? am.score?.fullTime?.homeTeam ?? null;
+      const as_ = am.score?.fullTime?.away ?? am.score?.fullTime?.awayTeam ?? null;
+      const isPlayed = status === 'FINISHED' || status === 'IN_PLAY' || status === 'PAUSED';
+      const hasRealScore = isPlayed && typeof hs === 'number' && typeof as_ === 'number';
+      if (!hasRealScore) return;
 
+      function norm(n) {
+        return (n||'').toLowerCase()
+          .replace('united states','usa').replace('türkiye','turkey')
+          .replace('ivory coast',"côte d'ivoire").replace('czech republic','czechia')
+          .replace('bosnia-herzegovina','bosnia and herzegovina')
+          .replace('curacao','curaçao').replace('cape verde islands','cape verde')
+          .replace('ir iran','iran').replace('korea republic','south korea');
+      }
+      const hnN = norm(hn), anN = norm(an);
       const idx = MATCHES.findIndex(m => {
-        const mhN = norm(m[3]);
-        const maN = norm(m[4]);
+        const mhN = norm(m[3]), maN = norm(m[4]);
         return (hnN === mhN || hnN.includes(mhN) || mhN.includes(hnN)) &&
                (anN === maN || anN.includes(maN) || maN.includes(anN));
       });
-
-      if (idx >= 0) {
-        MATCHES[idx][5] = scoreH;
-        MATCHES[idx][6] = scoreA;
-        updated++;
-        debugLines.push(`  ✓ MATCHED → MATCHES[${idx}] updated to ${scoreH}-${scoreA}`);
-      } else {
-        debugLines.push(`  ✗ NO MATCH: "${hn}" vs "${an}" (normalized: "${hnN}" vs "${anN}")`);
-      }
+      if (idx >= 0) { MATCHES[idx][5] = hs; MATCHES[idx][6] = as_; }
     });
 
-    setDebug(debugLines.join('\n'));
-    setApiStatus('ok', `Live ✓ · ${updated} result${updated!==1?'s':''}`);
     renderAll();
-  } catch (e) {
-    setApiStatus('err', 'Fetch error');
-    setDebug('Fetch threw: ' + e.message);
-    console.warn('Score fetch failed:', e.message);
-  }
+  } catch (e) { /* silent fail — keep existing data */ }
 }
 
-function setDebug(text) {
-  let el = document.getElementById('debug-panel');
-  if (!el) {
-    el = document.createElement('div');
-    el.id = 'debug-panel';
-    el.style.cssText = `position:fixed;bottom:40px;right:0;width:520px;max-height:400px;overflow-y:auto;
-      background:#07111fee;border:1px solid #c9a84c;border-right:none;padding:12px 16px;
-      font-family:monospace;font-size:12px;color:#c8d8f0;z-index:999;white-space:pre-wrap;
-      border-radius:8px 0 0 8px;`;
-    const closeBtn = document.createElement('div');
-    closeBtn.textContent = '✕ close';
-    closeBtn.style.cssText = 'position:absolute;top:8px;right:10px;cursor:pointer;color:#c9a84c;font-size:11px;';
-    closeBtn.onclick = () => el.remove();
-    el.appendChild(closeBtn);
-    document.body.appendChild(el);
-  }
-  const pre = el.querySelector('pre') || document.createElement('pre');
-  pre.textContent = text;
-  if (!el.contains(pre)) el.appendChild(pre);
-}
 
 // ═══════════════════════════════════════════════════════════
 //  HELPERS

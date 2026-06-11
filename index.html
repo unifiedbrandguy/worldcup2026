@@ -115,7 +115,7 @@
   .gs-header { display: flex; align-items: center; gap: 10px; margin-bottom: 5px; }
   .gs-name {
     font-family: 'Barlow Condensed', sans-serif;
-    font-size: 24px;
+    font-size: 28px;
     font-weight: 900;
     letter-spacing: 0.12em;
     color: var(--gold);
@@ -126,7 +126,7 @@
   .gs-cols {
     display: grid;
     grid-template-columns: 1fr 30px 30px 30px 30px 36px;
-    font-size: 17px;
+    font-size: 20px;
     color: var(--muted);
     font-weight: 700;
     letter-spacing: 0.06em;
@@ -149,18 +149,18 @@
   .gs-row.third { border-left: 3px solid var(--gold-dim); }
 
   .gs-team { display: flex; align-items: center; gap: 7px; }
-  .gs-flag { font-size: 20px; line-height: 1; }
+  .gs-flag { font-size: 23px; line-height: 1; }
   .gs-tname {
-    font-size: 19px;
+    font-size: 22px;
     font-weight: 600;
     color: var(--text);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 200px;
+    max-width: 190px;
   }
-  .gs-num { font-size: 19px; font-weight: 600; text-align: center; color: var(--text); }
-  .gs-pts { font-size: 21px; font-weight: 800; text-align: center; color: #fff; }
+  .gs-num { font-size: 22px; font-weight: 600; text-align: center; color: var(--text); }
+  .gs-pts { font-size: 24px; font-weight: 800; text-align: center; color: #fff; }
 
   /* ═══ CENTER PANEL ═══ */
   .center-panel {
@@ -711,6 +711,13 @@ function computeStandings(groupId) {
 // ═══════════════════════════════════════════════════════════
 //  RENDER STANDINGS
 // ═══════════════════════════════════════════════════════════
+const SHORT_NAMES = {
+  'Bosnia and Herzegovina': 'Bosnia-Herz.',
+  'Cape Verde Islands': 'Cape Verde',
+  "Côte d'Ivoire": "Côte d'Ivoire",
+};
+function shortName(n) { return SHORT_NAMES[n] || n; }
+
 function renderStandings(el, groupIds) {
   el.innerHTML = groupIds.map(gid => {
     const rows = computeStandings(gid);
@@ -722,7 +729,7 @@ function renderStandings(el, groupIds) {
       <div class="gs-cols"><span>Team</span><span>P</span><span>W</span><span>D</span><span>L</span><span>Pts</span></div>
       ${rows.map((r,i) => `
         <div class="gs-row ${i<2?'qualified':i===2?'third':''}">
-          <div class="gs-team"><span class="gs-flag">${F(r.name)}</span><span class="gs-tname">${r.name}</span></div>
+          <div class="gs-team"><span class="gs-flag">${F(r.name)}</span><span class="gs-tname">${shortName(r.name)}</span></div>
           <span class="gs-num">${r.mp}</span><span class="gs-num">${r.w}</span>
           <span class="gs-num">${r.d}</span><span class="gs-num">${r.l}</span>
           <span class="gs-pts">${r.pts}</span>

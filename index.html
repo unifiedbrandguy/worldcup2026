@@ -615,12 +615,8 @@ function setApiStatus(state, text) {
 //  We fetch all WC matches at once to stay well within limits
 // ═══════════════════════════════════════════════════════════
 async function fetchScores() {
-  if (!apiKey) { setApiStatus('no-key', 'No API key'); return; }
-
   try {
-    const res = await fetch('https://api.football-data.org/v4/competitions/WC/matches', {
-      headers: { 'X-Auth-Token': apiKey }
-    });
+    const res = await fetch('https://throbbing-mouse-4bbe.uk-guido.workers.dev/');
 
     const rawText = await res.text();
     console.log('API HTTP status:', res.status);

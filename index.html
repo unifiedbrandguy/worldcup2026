@@ -651,6 +651,15 @@ async function fetchScores() {
       if (idx >= 0) { MATCHES[idx][5] = hs; MATCHES[idx][6] = as_; }
     });
 
+    // Save confirmed scores to localStorage so they survive page reloads
+    const scoreCache = {};
+    MATCHES.forEach((m, i) => {
+      if (m[5] !== null && m[6] !== null) {
+        scoreCache[i] = [m[5], m[6]];
+      }
+    });
+    try { localStorage.setItem('wc2026_scores', JSON.stringify(scoreCache)); } catch(e) {}
+
     renderAll();
   } catch (e) { /* silent fail — keep existing data */ }
 }
@@ -870,6 +879,14 @@ setInterval(() => { if (apiKey) fetchScores(); }, 60000);
 // ═══════════════════════════════════════════════════════════
 //  INIT
 // ═══════════════════════════════════════════════════════════
+// Restore any previously confirmed scores from localStorage
+try {
+  const cached = JSON.parse(localStorage.getItem('wc2026_scores') || '{}');
+  Object.entries(cached).forEach(([i, scores]) => {
+    if (MATCHES[i]) { MATCHES[i][5] = scores[0]; MATCHES[i][6] = scores[1]; }
+  });
+} catch(e) {}
+
 renderAll();
 </script>
 </body>

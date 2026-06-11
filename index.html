@@ -753,11 +753,23 @@ function kickoffUTC(dateStr, etTime) {
   d.setUTCHours(hour + 4, m, 0, 0);
   return d;
 }
-function matchStatus(dateStr, etTime) {
+// apiStatusMap: populated from API, keyed as "HomeTeam|AwayTeam"
+let apiStatusMap = {};
+
+function matchStatus(dateStr, etTime, home, away) {
+  // If API has told us the status, trust it completely
+  const key = (home + '|' + away).toLowerCase();
+  if (apiStatusMap[key]) {
+    const s = apiStatusMap[key];
+    if (s === 'IN_PLAY' || s === 'PAUSED' || s === 'HALFTIME') return 'live';
+    if (s === 'FINISHED') return 'finished';
+    return 'upcoming'; // TIMED, SCHEDULED, etc
+  }
+  // Fall back to time only for upcoming (never auto-finish based on clock)
   const diff = Date.now() - kickoffUTC(dateStr, etTime).getTime();
   if (diff < 0) return 'upcoming';
-  if (diff < 115 * 60000) return 'live';
-  return 'finished';
+  if (diff < 115 * 60000) return 'live'; // only show live during expected match window
+  return 'upcoming'; // default to upcoming if API hasn't confirmed finish
 }
 function fmtKickoff(dateStr, etTime) {
   return kickoffUTC(dateStr, etTime).toLocaleString('en-US', {
@@ -826,7 +838,7 @@ function renderCenter(slideIdx, groupIndex) {
   document.getElementById(`matches-area-${slideIdx+1}`).innerHTML = cards.map(m => {
     const [,date,time,home,away,hs,as_,venue,city] = m;
     const hasScore = hs !== null && as_ !== null;
-    const st = hasScore ? matchStatus(date,time) : 'upcoming';
+    const st = hasScore ? matchStatus(date,time,home,away) : matchStatus(date,time,home,away);
 
     const pill = st==='live'
       ? `<span class="mc-status st-live">● LIVE</span>`
